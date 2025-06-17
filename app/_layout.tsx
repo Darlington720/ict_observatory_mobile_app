@@ -61,6 +61,7 @@ function RootLayoutNav() {
             backgroundColor: colors.background,
           },
           animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade',
+          headerShown: false
         }}
       >
         {!isAuthenticated ? (
