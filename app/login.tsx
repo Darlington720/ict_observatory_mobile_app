@@ -2,8 +2,17 @@ import { colors } from "@/constants/Colors";
 import { useAuthStore } from "@/store/authStore";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { Database, Lock, School, Eye, EyeOff, Mail, CircleAlert as AlertCircle, CircleCheck as CheckCircle2 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import { 
+  Database, 
+  Lock, 
+  School, 
+  Eye, 
+  EyeOff, 
+  Mail, 
+  CircleAlert as AlertCircle, 
+  CircleCheck as CheckCircle2 
+} from "lucide-react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,88 +25,165 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  AccessibilityInfo,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
+// Types
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
+
+interface AnimationRefs {
+  fadeAnim: Animated.Value;
+  slideAnim: Animated.Value;
+  logoScale: Animated.Value;
+}
+
+// Constants
+const ANIMATION_DURATION = {
+  FADE: 800,
+  SLIDE: 600,
+  SPRING_TENSION: 100,
+  SPRING_FRICTION: 8,
+} as const;
+
+const VALIDATION_RULES = {
+  EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  MIN_PASSWORD_LENGTH: 6,
+  ERROR_DISPLAY_DURATION: 5000,
+} as const;
+
+const DEMO_CREDENTIALS = {
+  PASSWORD: "password",
+} as const;
+
 export default function LoginScreen() {
+  // State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+
+  // Store
   const { login, isLoading, error, clearError } = useAuthStore();
 
   // Animation values
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(50));
-  const [logoScale] = useState(new Animated.Value(0.8));
+  const animationRefs = useMemo<AnimationRefs>(() => ({
+    fadeAnim: new Animated.Value(0),
+    slideAnim: new Animated.Value(50),
+    logoScale: new Animated.Value(0.8),
+  }), []);
 
+  // Effects
   useEffect(() => {
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    startEntranceAnimations();
   }, []);
 
   useEffect(() => {
     if (error) {
-      // Auto-clear error after 5 seconds
-      const timer = setTimeout(() => {
-        clearError();
-      }, 5000);
+      const timer = setTimeout(clearError, VALIDATION_RULES.ERROR_DISPLAY_DURATION);
       return () => clearTimeout(timer);
     }
   }, [error, clearError]);
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
+  // Animation functions
+  const startEntranceAnimations = useCallback(() => {
+    const { fadeAnim, slideAnim, logoScale } = animationRefs;
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: ANIMATION_DURATION.FADE,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: ANIMATION_DURATION.SLIDE,
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        tension: ANIMATION_DURATION.SPRING_TENSION,
+        friction: ANIMATION_DURATION.SPRING_FRICTION,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [animationRefs]);
 
+  // Validation functions
+  const validateEmail = useCallback((email: string): string | undefined => {
     if (!email.trim()) {
-      errors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = "Please enter a valid email address";
+      return "Email is required";
     }
+    if (!VALIDATION_RULES.EMAIL_REGEX.test(email)) {
+      return "Please enter a valid email address";
+    }
+    return undefined;
+  }, []);
 
+  const validatePassword = useCallback((password: string): string | undefined => {
     if (!password.trim()) {
-      errors.password = "Password is required";
-    } else if (password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
+      return "Password is required";
     }
+    if (password.length < VALIDATION_RULES.MIN_PASSWORD_LENGTH) {
+      return `Password must be at least ${VALIDATION_RULES.MIN_PASSWORD_LENGTH} characters`;
+    }
+    return undefined;
+  }, []);
+
+  const validateForm = useCallback((): boolean => {
+    const errors: FormErrors = {};
+    
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    
+    if (emailError) errors.email = emailError;
+    if (passwordError) errors.password = passwordError;
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  };
+  }, [email, password, validateEmail, validatePassword]);
 
-  const handleLogin = async () => {
-    if (!validateForm()) return;
+  // Event handlers
+  const handleEmailChange = useCallback((text: string) => {
+    setEmail(text);
+    if (formErrors.email) {
+      setFormErrors(prev => ({ ...prev, email: undefined }));
+    }
+  }, [formErrors.email]);
+
+  const handlePasswordChange = useCallback((text: string) => {
+    setPassword(text);
+    if (formErrors.password) {
+      setFormErrors(prev => ({ ...prev, password: undefined }));
+    }
+  }, [formErrors.password]);
+
+  const handleLogin = useCallback(async () => {
+    if (!validateForm()) {
+      AccessibilityInfo.announceForAccessibility("Please fix the form errors");
+      return;
+    }
 
     clearError();
-    await login(email.trim().toLowerCase(), password);
-  };
+    try {
+      await login(email.trim().toLowerCase(), password);
+    } catch (err) {
+      AccessibilityInfo.announceForAccessibility("Login failed. Please try again.");
+    }
+  }, [validateForm, clearError, login, email, password]);
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = useCallback(() => {
     if (!email.trim()) {
       Alert.alert(
         "Email Required", 
-        "Please enter your email address first, then tap 'Forgot Password' to receive reset instructions."
+        "Please enter your email address first, then tap 'Forgot Password' to receive reset instructions.",
+        [{ text: "OK" }]
       );
       return;
     }
@@ -107,9 +193,14 @@ export default function LoginScreen() {
       `Password reset instructions have been sent to ${email}`,
       [{ text: "OK" }]
     );
-  };
+  }, [email]);
 
-  const renderErrorMessage = () => {
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
+
+  // Render functions
+  const renderErrorMessage = useCallback(() => {
     if (!error) return null;
 
     return (
@@ -117,33 +208,111 @@ export default function LoginScreen() {
         style={[
           styles.errorContainer,
           {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
+            opacity: animationRefs.fadeAnim,
+            transform: [{ translateY: animationRefs.slideAnim }],
           }
         ]}
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
       >
         <AlertCircle size={16} color={colors.error} />
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={clearError} style={styles.errorClose}>
+        <TouchableOpacity 
+          onPress={clearError} 
+          style={styles.errorClose}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss error"
+        >
           <Text style={styles.errorCloseText}>×</Text>
         </TouchableOpacity>
       </Animated.View>
     );
-  };
+  }, [error, animationRefs, clearError]);
 
-  const renderSuccessDemo = () => (
+  const renderDemoInfo = useCallback(() => (
     <View style={styles.demoContainer}>
       <View style={styles.demoCard}>
         <CheckCircle2 size={20} color={colors.success} />
         <View style={styles.demoTextContainer}>
           <Text style={styles.demoTitle}>Demo Account</Text>
           <Text style={styles.demoText}>
-            Use any email with password: <Text style={styles.demoPassword}>password</Text>
+            Use any email with password: {" "}
+            <Text style={styles.demoPassword}>{DEMO_CREDENTIALS.PASSWORD}</Text>
           </Text>
         </View>
       </View>
     </View>
-  );
+  ), []);
+
+  const renderInputField = useCallback((
+    type: 'email' | 'password',
+    value: string,
+    onChangeText: (text: string) => void,
+    focused: boolean,
+    onFocus: () => void,
+    onBlur: () => void,
+    error?: string
+  ) => {
+    const isEmail = type === 'email';
+    const isPassword = type === 'password';
+    
+    return (
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>
+          {isEmail ? 'Email Address' : 'Password'}
+        </Text>
+        <View style={[
+          styles.inputContainer,
+          focused && styles.inputFocused,
+          error && styles.inputError,
+        ]}>
+          <View style={styles.inputIcon}>
+            {isEmail ? (
+              <Mail size={20} color={focused ? colors.primary : colors.textSecondary} />
+            ) : (
+              <Lock size={20} color={focused ? colors.primary : colors.textSecondary} />
+            )}
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder={isEmail ? "Enter your email" : "Enter your password"}
+            placeholderTextColor={colors.placeholder}
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            autoCapitalize={isEmail ? "none" : "none"}
+            keyboardType={isEmail ? "email-address" : "default"}
+            autoComplete={isEmail ? "email" : "password"}
+            textContentType={isEmail ? "emailAddress" : "password"}
+            secureTextEntry={isPassword && !showPassword}
+            accessibilityLabel={isEmail ? "Email input" : "Password input"}
+            accessibilityHint={isEmail ? "Enter your email address" : "Enter your password"}
+          />
+          {isPassword && (
+            <TouchableOpacity
+              style={styles.passwordToggle}
+              onPress={togglePasswordVisibility}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff size={20} color={colors.textSecondary} />
+              ) : (
+                <Eye size={20} color={colors.textSecondary} />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+        {error && (
+          <Text style={styles.fieldError} accessibilityRole="text">
+            {error}
+          </Text>
+        )}
+      </View>
+    );
+  }, [showPassword, togglePasswordVisibility]);
 
   return (
     <KeyboardAvoidingView
@@ -165,10 +334,10 @@ export default function LoginScreen() {
         style={[
           styles.header,
           {
-            opacity: fadeAnim,
+            opacity: animationRefs.fadeAnim,
             transform: [
-              { translateY: slideAnim },
-              { scale: logoScale }
+              { translateY: animationRefs.slideAnim },
+              { scale: animationRefs.logoScale }
             ],
           }
         ]}
@@ -186,8 +355,8 @@ export default function LoginScreen() {
         style={[
           styles.formContainer,
           {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
+            opacity: animationRefs.fadeAnim,
+            transform: [{ translateY: animationRefs.slideAnim }],
           }
         ]}
       >
@@ -198,90 +367,34 @@ export default function LoginScreen() {
           {renderErrorMessage()}
 
           {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email Address</Text>
-            <View style={[
-              styles.inputContainer,
-              emailFocused && styles.inputFocused,
-              formErrors.email && styles.inputError,
-            ]}>
-              <View style={styles.inputIcon}>
-                <Mail size={20} color={emailFocused ? colors.primary : colors.textSecondary} />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor={colors.placeholder}
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (formErrors.email) {
-                    setFormErrors(prev => ({ ...prev, email: "" }));
-                  }
-                }}
-                onFocus={() => setEmailFocused(true)}
-                onBlur={() => setEmailFocused(false)}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                textContentType="emailAddress"
-              />
-            </View>
-            {formErrors.email && (
-              <Text style={styles.fieldError}>{formErrors.email}</Text>
-            )}
-          </View>
+          {renderInputField(
+            'email',
+            email,
+            handleEmailChange,
+            emailFocused,
+            () => setEmailFocused(true),
+            () => setEmailFocused(false),
+            formErrors.email
+          )}
 
           {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Password</Text>
-            <View style={[
-              styles.inputContainer,
-              passwordFocused && styles.inputFocused,
-              formErrors.password && styles.inputError,
-            ]}>
-              <View style={styles.inputIcon}>
-                <Lock size={20} color={passwordFocused ? colors.primary : colors.textSecondary} />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                placeholderTextColor={colors.placeholder}
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  if (formErrors.password) {
-                    setFormErrors(prev => ({ ...prev, password: "" }));
-                  }
-                }}
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                textContentType="password"
-              />
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowPassword(!showPassword)}
-                activeOpacity={0.7}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color={colors.textSecondary} />
-                ) : (
-                  <Eye size={20} color={colors.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-            {formErrors.password && (
-              <Text style={styles.fieldError}>{formErrors.password}</Text>
-            )}
-          </View>
+          {renderInputField(
+            'password',
+            password,
+            handlePasswordChange,
+            passwordFocused,
+            () => setPasswordFocused(true),
+            () => setPasswordFocused(false),
+            formErrors.password
+          )}
 
           {/* Forgot Password */}
           <TouchableOpacity 
             style={styles.forgotPassword}
             onPress={handleForgotPassword}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
           >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
@@ -295,6 +408,9 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={isLoading}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+            accessibilityState={{ disabled: isLoading }}
           >
             {isLoading ? (
               <View style={styles.loadingContainer}>
@@ -306,7 +422,7 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {renderSuccessDemo()}
+          {renderDemoInfo()}
         </View>
 
         {/* Footer */}
@@ -427,6 +543,10 @@ const styles = StyleSheet.create({
   },
   errorClose: {
     padding: 4,
+    minWidth: 24,
+    minHeight: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorCloseText: {
     color: colors.error,
@@ -472,6 +592,10 @@ const styles = StyleSheet.create({
   passwordToggle: {
     paddingHorizontal: 16,
     paddingVertical: 16,
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fieldError: {
     color: colors.error,
@@ -483,7 +607,8 @@ const styles = StyleSheet.create({
   forgotPassword: {
     alignSelf: "flex-end",
     marginBottom: 24,
-    paddingVertical: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   forgotPasswordText: {
     color: colors.primary,
