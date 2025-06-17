@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     height: height * 0.6, 
   },
   header: {
-    height: height * 0.45,
+    height: height * 0.2,
     justifyContent: "center",
     alignItems: "center",
     paddingTop: 60,
