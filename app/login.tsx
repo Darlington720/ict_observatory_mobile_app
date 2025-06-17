@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: height * 0.4,
+    height: height * 0.2,
   },
   header: {
     height: height * 0.45,
