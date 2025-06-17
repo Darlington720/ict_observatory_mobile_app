@@ -83,6 +83,7 @@ export const useAuthStore = create<AuthState>()(
             const remainingTime = Math.ceil((LOCKOUT_DURATION - timeSinceLastAttempt) / 60000);
             set({
               error: `Too many failed attempts. Please try again in ${remainingTime} minutes.`,
+              isLoading: false,
             });
             return;
           } else {
@@ -133,6 +134,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             loginAttempts: 0,
             lastLoginAttempt: null,
+            error: null,
           });
 
         } catch (error) {

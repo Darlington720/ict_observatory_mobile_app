@@ -6,7 +6,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform } from "react-native"
+import { Platform } from "react-native";
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 export const unstable_settings = {
@@ -18,6 +18,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useFrameworkReady();
+  
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
   });
@@ -43,7 +44,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { isAuthenticated, user } = useAuthStore();
 
   return (
     <>
@@ -64,7 +65,7 @@ function RootLayoutNav() {
           headerShown: false
         }}
       >
-        {!isAuthenticated ? (
+        {!isAuthenticated || !user ? (
           <Stack.Screen
             name="login"
             options={{
@@ -87,6 +88,7 @@ function RootLayoutNav() {
                 title: "School Details",
                 headerBackTitle: "Schools",
                 presentation: 'card',
+                headerShown: true,
               }}
             />
             <Stack.Screen
@@ -95,6 +97,7 @@ function RootLayoutNav() {
                 title: "Add School",
                 headerBackTitle: "Schools",
                 presentation: 'modal',
+                headerShown: true,
               }}
             />
             <Stack.Screen
@@ -103,6 +106,7 @@ function RootLayoutNav() {
                 title: "Edit School",
                 headerBackTitle: "Details",
                 presentation: 'card',
+                headerShown: true,
               }}
             />
             <Stack.Screen
@@ -111,6 +115,7 @@ function RootLayoutNav() {
                 title: "Report Details",
                 headerBackTitle: "Reports",
                 presentation: 'card',
+                headerShown: true,
               }}
             />
             <Stack.Screen
@@ -119,6 +124,7 @@ function RootLayoutNav() {
                 title: "Add Report",
                 headerBackTitle: "Back",
                 presentation: 'modal',
+                headerShown: true,
               }}
             />
             <Stack.Screen
@@ -127,6 +133,7 @@ function RootLayoutNav() {
                 title: "Add School Report",
                 headerBackTitle: "School",
                 presentation: 'card',
+                headerShown: true,
               }}
             />
             <Stack.Screen
@@ -135,6 +142,7 @@ function RootLayoutNav() {
                 title: "Edit Report",
                 headerBackTitle: "Details",
                 presentation: 'card',
+                headerShown: true,
               }}
             />
           </>
