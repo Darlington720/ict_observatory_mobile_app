@@ -6,35 +6,7 @@ import { colors } from '@/constants/Colors';
 import { useSchoolStore } from '@/store/schoolStore';
 import { SchoolPDFGenerator, downloadPDF } from '@/utils/pdfGenerator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-    BookOpen,
-    Building,
-    Calendar,
-    Camera,
-    Download,
-    Edit3,
-    Globe,
-    GraduationCap,
-    HardDrive,
-    Heart,
-    Home,
-    Laptop,
-    Mail,
-    MapPin,
-    Monitor,
-    Phone,
-    Plus,
-    School as SchoolIcon,
-    Settings,
-    Share2,
-    Shield,
-    Trash2,
-    TrendingUp,
-    User,
-    Users,
-    Wifi,
-    Zap
-} from 'lucide-react-native';
+import { BookOpen, Building, Calendar, Camera, Download, LocationEdit as Edit3, Globe, GraduationCap, HardDrive, Heart, Chrome as Home, Laptop, Mail, MapPin, Monitor, Phone, Plus, School as SchoolIcon, Settings, Share2, Shield, Trash2, TrendingUp, User, Users, Wifi, Zap } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { 
   Alert, 
