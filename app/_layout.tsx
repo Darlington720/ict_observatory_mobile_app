@@ -65,7 +65,7 @@ function RootLayoutNav() {
           headerShown: false
         }}
       >
-        {!isAuthenticated || !user ? (
+         <Stack.Protected guard={!isAuthenticated}>
           <Stack.Screen
             name="login"
             options={{
@@ -73,8 +73,8 @@ function RootLayoutNav() {
               animation: 'fade',
             }}
           />
-        ) : (
-          <>
+        </Stack.Protected>
+        <Stack.Protected guard={isAuthenticated}>
             <Stack.Screen 
               name="(tabs)" 
               options={{ 
@@ -145,8 +145,8 @@ function RootLayoutNav() {
                 headerShown: true,
               }}
             />
-          </>
-        )}
+      </Stack.Protected>
+      
       </Stack>
     </>
   );
