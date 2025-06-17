@@ -20,6 +20,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -329,111 +330,118 @@ export default function LoginScreen() {
         end={{ x: 1, y: 1 }}
       />
 
-      {/* Animated Header */}
-      <Animated.View 
-        style={[
-          styles.header,
-          {
-            opacity: animationRefs.fadeAnim,
-            transform: [
-              { translateY: animationRefs.slideAnim },
-              { scale: animationRefs.logoScale }
-            ],
-          }
-        ]}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.logoContainer}>
-          <School size={56} color="white" />
-        </View>
-        <Text style={styles.title}>ICT4Primary</Text>
-        <Text style={styles.subtitle}>School ICT Data Collection Platform</Text>
-        <View style={styles.headerDivider} />
-      </Animated.View>
+        {/* Animated Header */}
+        <Animated.View 
+          style={[
+            styles.header,
+            {
+              opacity: animationRefs.fadeAnim,
+              transform: [
+                { translateY: animationRefs.slideAnim },
+                { scale: animationRefs.logoScale }
+              ],
+            }
+          ]}
+        >
+          <View style={styles.logoContainer}>
+            <School size={48} color="white" />
+          </View>
+          <Text style={styles.title}>ICT4Primary</Text>
+          <Text style={styles.subtitle}>School ICT Data Collection Platform</Text>
+          <View style={styles.headerDivider} />
+        </Animated.View>
 
-      {/* Form Container */}
-      <Animated.View 
-        style={[
-          styles.formContainer,
-          {
-            opacity: animationRefs.fadeAnim,
-            transform: [{ translateY: animationRefs.slideAnim }],
-          }
-        ]}
-      >
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Welcome Back</Text>
-          <Text style={styles.formSubtitle}>Sign in to continue data collection</Text>
+        {/* Form Container */}
+        <Animated.View 
+          style={[
+            styles.formContainer,
+            {
+              opacity: animationRefs.fadeAnim,
+              transform: [{ translateY: animationRefs.slideAnim }],
+            }
+          ]}
+        >
+          <View style={styles.formCard}>
+            <Text style={styles.formTitle}>Welcome Back</Text>
+            <Text style={styles.formSubtitle}>Sign in to continue data collection</Text>
 
-          {renderErrorMessage()}
+            {renderErrorMessage()}
 
-          {/* Email Input */}
-          {renderInputField(
-            'email',
-            email,
-            handleEmailChange,
-            emailFocused,
-            () => setEmailFocused(true),
-            () => setEmailFocused(false),
-            formErrors.email
-          )}
-
-          {/* Password Input */}
-          {renderInputField(
-            'password',
-            password,
-            handlePasswordChange,
-            passwordFocused,
-            () => setPasswordFocused(true),
-            () => setPasswordFocused(false),
-            formErrors.password
-          )}
-
-          {/* Forgot Password */}
-          <TouchableOpacity 
-            style={styles.forgotPassword}
-            onPress={handleForgotPassword}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Forgot password"
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[
-              styles.loginButton,
-              isLoading && styles.loginButtonLoading,
-            ]}
-            onPress={handleLogin}
-            disabled={isLoading}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Sign in"
-            accessibilityState={{ disabled: isLoading }}
-          >
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color="white" size="small" />
-                <Text style={styles.loadingText}>Signing In...</Text>
-              </View>
-            ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
+            {/* Email Input */}
+            {renderInputField(
+              'email',
+              email,
+              handleEmailChange,
+              emailFocused,
+              () => setEmailFocused(true),
+              () => setEmailFocused(false),
+              formErrors.email
             )}
-          </TouchableOpacity>
 
-          {renderDemoInfo()}
-        </View>
+            {/* Password Input */}
+            {renderInputField(
+              'password',
+              password,
+              handlePasswordChange,
+              passwordFocused,
+              () => setPasswordFocused(true),
+              () => setPasswordFocused(false),
+              formErrors.password
+            )}
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Empowering Schools Through Technology
-          </Text>
-          <View style={styles.footerDivider} />
-          <Text style={styles.versionText}>Version 1.0.0</Text>
-        </View>
-      </Animated.View>
+            {/* Forgot Password */}
+            <TouchableOpacity 
+              style={styles.forgotPassword}
+              onPress={handleForgotPassword}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot password"
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            {/* Login Button */}
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                isLoading && styles.loginButtonLoading,
+              ]}
+              onPress={handleLogin}
+              disabled={isLoading}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
+              accessibilityState={{ disabled: isLoading }}
+            >
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color="white" size="small" />
+                  <Text style={styles.loadingText}>Signing In...</Text>
+                </View>
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            {renderDemoInfo()}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Empowering Schools Through Technology
+            </Text>
+            <View style={styles.footerDivider} />
+            <Text style={styles.versionText}>Version 1.0.0</Text>
+          </View>
+        </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -448,23 +456,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: height * 0.6, 
+    height: height * 0.5, 
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: height,
   },
   header: {
-    height: height * 0.3,
+    height: height * 0.35,
     justifyContent: "center",
     alignItems: "center",
     paddingTop: 60,
     paddingHorizontal: 24,
   },
   logoContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -472,57 +487,57 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "800",
     color: "white",
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "rgba(255, 255, 255, 0.9)",
     textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 20,
+    marginBottom: 20,
   },
   headerDivider: {
-    width: 60,
+    width: 50,
     height: 3,
     backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 2,
   },
   formContainer: {
     flex: 1,
-    marginTop: -40,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    marginTop: -30,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     backgroundColor: colors.background,
-    paddingHorizontal: 24,
-    paddingTop: 32,
+    paddingHorizontal: 20,
+    paddingTop: 28,
   },
   formCard: {
     backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   formTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: "center",
   },
   formSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
+    marginBottom: 28,
+    lineHeight: 20,
   },
   errorContainer: {
     flexDirection: "row",
@@ -530,14 +545,14 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.error}10`,
     borderWidth: 1,
     borderColor: `${colors.error}30`,
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   errorText: {
     flex: 1,
     color: colors.error,
-    fontSize: 14,
+    fontSize: 13,
     marginLeft: 8,
     fontWeight: "500",
   },
@@ -550,26 +565,26 @@ const styles = StyleSheet.create({
   },
   errorCloseText: {
     color: colors.error,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: colors.background,
-    minHeight: 56,
+    minHeight: 50,
   },
   inputFocused: {
     borderColor: colors.primary,
@@ -579,61 +594,61 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   inputIcon: {
-    paddingLeft: 16,
-    paddingRight: 12,
+    paddingLeft: 14,
+    paddingRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
-    paddingVertical: 16,
-    paddingRight: 16,
+    paddingVertical: 14,
+    paddingRight: 14,
   },
   passwordToggle: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    minWidth: 48,
-    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    minWidth: 44,
+    minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
   fieldError: {
     color: colors.error,
-    fontSize: 12,
-    marginTop: 6,
-    marginLeft: 4,
+    fontSize: 11,
+    marginTop: 4,
+    marginLeft: 2,
     fontWeight: "500",
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginBottom: 24,
-    paddingVertical: 8,
+    marginBottom: 20,
+    paddingVertical: 6,
     paddingHorizontal: 4,
   },
   forgotPasswordText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
   loginButton: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    minHeight: 56,
+    borderRadius: 10,
+    minHeight: 50,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   loginButtonLoading: {
     backgroundColor: colors.disabled,
   },
   loginButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
   },
   loadingContainer: {
@@ -642,12 +657,12 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: "white",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     marginLeft: 8,
   },
   demoContainer: {
-    marginTop: 8,
+    marginTop: 6,
   },
   demoCard: {
     flexDirection: "row",
@@ -655,52 +670,52 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.success}08`,
     borderWidth: 1,
     borderColor: `${colors.success}20`,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 10,
+    padding: 14,
   },
   demoTextContainer: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 10,
   },
   demoTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.success,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   demoText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   demoPassword: {
     fontWeight: "600",
     color: colors.text,
     backgroundColor: `${colors.primary}15`,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
   },
   footer: {
     alignItems: "center",
-    marginTop: 32,
-    marginBottom: 24,
+    marginTop: 28,
+    marginBottom: 20,
   },
   footerText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     textAlign: "center",
   },
   footerDivider: {
-    width: 40,
+    width: 35,
     height: 2,
     backgroundColor: `${colors.primary}30`,
     borderRadius: 1,
-    marginVertical: 12,
+    marginVertical: 10,
   },
   versionText: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 11,
   },
 });

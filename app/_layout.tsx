@@ -62,10 +62,9 @@ function RootLayoutNav() {
             backgroundColor: colors.background,
           },
           animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade',
-          headerShown: false
         }}
       >
-         <Stack.Protected guard={!isAuthenticated}>
+        {!isAuthenticated || !user ? (
           <Stack.Screen
             name="login"
             options={{
@@ -73,8 +72,8 @@ function RootLayoutNav() {
               animation: 'fade',
             }}
           />
-        </Stack.Protected>
-        <Stack.Protected guard={isAuthenticated}>
+        ) : (
+          <>
             <Stack.Screen 
               name="(tabs)" 
               options={{ 
@@ -145,8 +144,8 @@ function RootLayoutNav() {
                 headerShown: true,
               }}
             />
-      </Stack.Protected>
-      
+          </>
+        )}
       </Stack>
     </>
   );
