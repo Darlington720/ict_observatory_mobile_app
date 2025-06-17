@@ -2,16 +2,7 @@ import { colors } from "@/constants/Colors";
 import { useAuthStore } from "@/store/authStore";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { 
-  Database, 
-  Lock, 
-  School, 
-  Eye, 
-  EyeOff, 
-  Mail,
-  AlertCircle,
-  CheckCircle2
-} from "lucide-react-native";
+import { Database, Lock, School, Eye, EyeOff, Mail, CircleAlert as AlertCircle, CircleCheck as CheckCircle2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
