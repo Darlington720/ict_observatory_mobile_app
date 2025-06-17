@@ -6,7 +6,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { Platform } from "react-native"
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 export const unstable_settings = {
   initialRouteName: "login",
@@ -16,6 +17,7 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useFrameworkReady();
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
   });
