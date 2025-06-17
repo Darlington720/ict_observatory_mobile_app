@@ -5,7 +5,16 @@ import { useSchoolStore } from "@/store/schoolStore";
 import { School } from "@/types";
 import { generateId } from "@/utils/sync";
 import { useRouter } from "expo-router";
-import { MapPin } from "lucide-react-native";
+import { 
+  MapPin, 
+  ChevronLeft, 
+  ChevronRight, 
+  Check,
+  School as SchoolIcon,
+  Users,
+  Laptop,
+  Wifi
+} from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -16,11 +25,24 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
 } from "react-native";
+
+const STEPS = [
+  { id: 'basic', title: 'Basic Info', icon: SchoolIcon },
+  { id: 'enrollment', title: 'Enrollment', icon: Users },
+  { id: 'infrastructure', title: 'ICT Setup', icon: Laptop },
+  { id: 'connectivity', title: 'Internet', icon: Wifi },
+];
 
 export default function AddSchoolScreen() {
   const router = useRouter();
   const { addSchool } = useSchoolStore();
+
+  // Step management
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [animatedValue] = useState(new Animated.Value(0));
 
   // Basic Information
   const [name, setName] = useState("");
@@ -83,130 +105,94 @@ export default function AddSchoolScreen() {
   const [provider, setProvider] = useState("");
   const [isStable, setIsStable] = useState(false);
 
-  // Current active section
-  const [activeSection, setActiveSection] = useState("basic");
-
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   // Simulate getting current location
   useEffect(() => {
-    // In a real app, we would use expo-location
-    // For demo, set a random location in Uganda
-    const randomLat = 0.3 + Math.random() * 2; // Uganda latitude range
-    const randomLng = 30 + Math.random() * 3; // Uganda longitude range
-
+    const randomLat = 0.3 + Math.random() * 2;
+    const randomLng = 30 + Math.random() * 3;
     setLocation({
       latitude: randomLat,
       longitude: randomLng,
     });
   }, []);
 
-  const validateBasicInfo = () => {
+  // Animate step transition
+  useEffect(() => {
+    Animated.timing(animatedValue, {
+      toValue: currentStep,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [currentStep]);
+
+  const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!name.trim()) newErrors.name = "School name is required";
-    if (!district.trim()) newErrors.district = "District is required";
-    if (!subCounty.trim()) newErrors.subCounty = "Sub-county is required";
+    switch (currentStep) {
+      case 0: // Basic Info
+        if (!name.trim()) newErrors.name = "School name is required";
+        if (!district.trim()) newErrors.district = "District is required";
+        if (!subCounty.trim()) newErrors.subCounty = "Sub-county is required";
+        if (
+          yearEstablished &&
+          (isNaN(parseInt(yearEstablished)) ||
+            parseInt(yearEstablished) < 1900 ||
+            parseInt(yearEstablished) > new Date().getFullYear())
+        ) {
+          newErrors.yearEstablished = "Enter a valid year";
+        }
+        break;
 
-    if (
-      yearEstablished &&
-      (isNaN(parseInt(yearEstablished)) ||
-        parseInt(yearEstablished) < 1900 ||
-        parseInt(yearEstablished) > new Date().getFullYear())
-    ) {
-      newErrors.yearEstablished = "Enter a valid year";
-    }
+      case 1: // Enrollment
+        const totalStudentsNum = parseInt(totalStudents);
+        const maleStudentsNum = parseInt(maleStudents);
+        const femaleStudentsNum = parseInt(femaleStudents);
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+        if (isNaN(totalStudentsNum) || totalStudentsNum < 0) {
+          newErrors.totalStudents = "Total students must be a positive number";
+        }
+        if (isNaN(maleStudentsNum) || maleStudentsNum < 0) {
+          newErrors.maleStudents = "Male students must be a positive number";
+        }
+        if (isNaN(femaleStudentsNum) || femaleStudentsNum < 0) {
+          newErrors.femaleStudents = "Female students must be a positive number";
+        }
+        if (maleStudentsNum + femaleStudentsNum !== totalStudentsNum) {
+          newErrors.totalStudents = "Total must equal male + female students";
+        }
+        if (!headTeacher.trim()) newErrors.headTeacher = "Head teacher name is required";
+        if (email && !/\S+@\S+\.\S+/.test(email)) {
+          newErrors.email = "Invalid email address";
+        }
+        if (!phone.trim()) {
+          newErrors.phone = "Phone number is required";
+        } else if (!/^\+?[0-9]{10,15}$/.test(phone.replace(/\s/g, ""))) {
+          newErrors.phone = "Invalid phone number";
+        }
+        break;
 
-  const validateEnrollment = () => {
-    const newErrors: Record<string, string> = {};
+      case 2: // Infrastructure
+        if (isNaN(parseInt(studentComputers)) || parseInt(studentComputers) < 0) {
+          newErrors.studentComputers = "Enter a valid number";
+        }
+        if (isNaN(parseInt(teacherComputers)) || parseInt(teacherComputers) < 0) {
+          newErrors.teacherComputers = "Enter a valid number";
+        }
+        break;
 
-    const totalStudentsNum = parseInt(totalStudents);
-    const maleStudentsNum = parseInt(maleStudents);
-    const femaleStudentsNum = parseInt(femaleStudents);
-
-    if (isNaN(totalStudentsNum) || totalStudentsNum < 0) {
-      newErrors.totalStudents = "Total students must be a positive number";
-    }
-
-    if (isNaN(maleStudentsNum) || maleStudentsNum < 0) {
-      newErrors.maleStudents = "Male students must be a positive number";
-    }
-
-    if (isNaN(femaleStudentsNum) || femaleStudentsNum < 0) {
-      newErrors.femaleStudents = "Female students must be a positive number";
-    }
-
-    if (maleStudentsNum + femaleStudentsNum !== totalStudentsNum) {
-      newErrors.totalStudents =
-        "Total students must equal male + female students";
-    }
-
-    if (!headTeacher.trim())
-      newErrors.headTeacher = "Head teacher name is required";
-
-    if (email && !/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Invalid email address";
-    }
-
-    if (!phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^\+?[0-9]{10,15}$/.test(phone.replace(/\s/g, ""))) {
-      newErrors.phone = "Invalid phone number";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateInfrastructure = () => {
-    const newErrors: Record<string, string> = {};
-
-    // Basic validation for numeric fields
-    if (isNaN(parseInt(studentComputers)) || parseInt(studentComputers) < 0) {
-      newErrors.studentComputers = "Enter a valid number";
-    }
-
-    if (isNaN(parseInt(teacherComputers)) || parseInt(teacherComputers) < 0) {
-      newErrors.teacherComputers = "Enter a valid number";
-    }
-
-    if (isNaN(parseInt(projectors)) || parseInt(projectors) < 0) {
-      newErrors.projectors = "Enter a valid number";
-    }
-
-    if (isNaN(parseInt(smartBoards)) || parseInt(smartBoards) < 0) {
-      newErrors.smartBoards = "Enter a valid number";
-    }
-
-    if (isNaN(parseInt(tablets)) || parseInt(tablets) < 0) {
-      newErrors.tablets = "Enter a valid number";
-    }
-
-    if (isNaN(parseInt(laptops)) || parseInt(laptops) < 0) {
-      newErrors.laptops = "Enter a valid number";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateConnectivity = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (connectionType !== "None") {
-      if (isNaN(parseFloat(bandwidthMbps)) || parseFloat(bandwidthMbps) < 0) {
-        newErrors.bandwidthMbps = "Enter a valid bandwidth";
-      }
-
-      if (!provider.trim()) {
-        newErrors.provider = "Provider is required";
-      }
+      case 3: // Connectivity
+        if (connectionType !== "None") {
+          if (isNaN(parseFloat(bandwidthMbps)) || parseFloat(bandwidthMbps) < 0) {
+            newErrors.bandwidthMbps = "Enter a valid bandwidth";
+          }
+          if (!provider.trim()) {
+            newErrors.provider = "Provider is required";
+          }
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -214,39 +200,28 @@ export default function AddSchoolScreen() {
   };
 
   const handleNext = () => {
-    let isValid = false;
-
-    switch (activeSection) {
-      case "basic":
-        isValid = validateBasicInfo();
-        if (isValid) setActiveSection("enrollment");
-        break;
-      case "enrollment":
-        isValid = validateEnrollment();
-        if (isValid) setActiveSection("infrastructure");
-        break;
-      case "infrastructure":
-        isValid = validateInfrastructure();
-        if (isValid) setActiveSection("connectivity");
-        break;
-      case "connectivity":
-        isValid = validateConnectivity();
-        if (isValid) handleSubmit();
-        break;
+    if (validateCurrentStep()) {
+      if (!completedSteps.includes(currentStep)) {
+        setCompletedSteps([...completedSteps, currentStep]);
+      }
+      
+      if (currentStep < STEPS.length - 1) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        handleSubmit();
+      }
     }
   };
 
-  const handleBack = () => {
-    switch (activeSection) {
-      case "enrollment":
-        setActiveSection("basic");
-        break;
-      case "infrastructure":
-        setActiveSection("enrollment");
-        break;
-      case "connectivity":
-        setActiveSection("infrastructure");
-        break;
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleStepPress = (stepIndex: number) => {
+    if (stepIndex <= currentStep || completedSteps.includes(stepIndex)) {
+      setCurrentStep(stepIndex);
     }
   };
 
@@ -269,7 +244,6 @@ export default function AddSchoolScreen() {
   const handleSubmit = () => {
     setIsLoading(true);
 
-    // Create new school object with the comprehensive data structure
     const newSchool: School = {
       id: generateId(),
       name,
@@ -298,7 +272,6 @@ export default function AddSchoolScreen() {
         phone,
       },
 
-      // ICT Infrastructure
       ictInfrastructure: {
         studentComputers: parseInt(studentComputers),
         teacherComputers: parseInt(teacherComputers),
@@ -315,7 +288,6 @@ export default function AddSchoolScreen() {
         hasFurniture,
       },
 
-      // Internet Connectivity
       internetConnectivity: {
         connectionType,
         bandwidthMbps: parseFloat(bandwidthMbps),
@@ -438,10 +410,8 @@ export default function AddSchoolScreen() {
       lastUpdated: new Date().toISOString(),
     };
 
-    // Add to store
     addSchool(newSchool);
 
-    // Show success message and navigate back
     Alert.alert("School Added", "School has been successfully added.", [
       {
         text: "OK",
@@ -467,11 +437,458 @@ export default function AddSchoolScreen() {
         activeOpacity={0.7}
       >
         <View style={[styles.checkboxBox, checked && styles.checkboxChecked]}>
-          {checked && <View style={styles.checkboxInner} />}
+          {checked && <Check size={14} color={colors.card} />}
         </View>
         <Text style={styles.checkboxLabel}>{label}</Text>
       </TouchableOpacity>
     );
+  };
+
+  const renderStepIndicator = () => (
+    <View style={styles.stepIndicator}>
+      {STEPS.map((step, index) => {
+        const isCompleted = completedSteps.includes(index);
+        const isCurrent = index === currentStep;
+        const isAccessible = index <= currentStep || isCompleted;
+        const IconComponent = step.icon;
+
+        return (
+          <TouchableOpacity
+            key={step.id}
+            style={styles.stepItem}
+            onPress={() => handleStepPress(index)}
+            disabled={!isAccessible}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.stepCircle,
+              isCompleted && styles.stepCompleted,
+              isCurrent && styles.stepCurrent,
+              !isAccessible && styles.stepDisabled,
+            ]}>
+              {isCompleted ? (
+                <Check size={16} color={colors.card} />
+              ) : (
+                <IconComponent 
+                  size={16} 
+                  color={isCurrent ? colors.card : isAccessible ? colors.primary : colors.disabled} 
+                />
+              )}
+            </View>
+            <Text style={[
+              styles.stepLabel,
+              isCompleted && styles.stepLabelCompleted,
+              isCurrent && styles.stepLabelCurrent,
+              !isAccessible && styles.stepLabelDisabled,
+            ]}>
+              {step.title}
+            </Text>
+            {index < STEPS.length - 1 && (
+              <View style={[
+                styles.stepConnector,
+                isCompleted && styles.stepConnectorCompleted,
+              ]} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  const renderBasicInfo = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>School Information</Text>
+      <Text style={styles.stepDescription}>
+        Enter the basic details about the school
+      </Text>
+
+      <Input
+        label="School Name *"
+        value={name}
+        onChangeText={setName}
+        placeholder="Enter school name"
+        error={errors.name}
+      />
+
+      <View style={styles.row}>
+        <Input
+          label="Region"
+          value={region}
+          onChangeText={setRegion}
+          placeholder="Enter region"
+          containerStyle={styles.halfWidth}
+        />
+        <Input
+          label="District *"
+          value={district}
+          onChangeText={setDistrict}
+          placeholder="Enter district"
+          error={errors.district}
+          containerStyle={styles.halfWidth}
+        />
+      </View>
+
+      <Input
+        label="Sub-County *"
+        value={subCounty}
+        onChangeText={setSubCounty}
+        placeholder="Enter sub-county"
+        error={errors.subCounty}
+      />
+
+      <View style={styles.row}>
+        <Input
+          label="EMIS Number"
+          value={emisNumber}
+          onChangeText={setEmisNumber}
+          placeholder="Enter EMIS number"
+          containerStyle={styles.halfWidth}
+        />
+        <Input
+          label="UPI Code"
+          value={upiCode}
+          onChangeText={setUpiCode}
+          placeholder="Enter UPI code"
+          containerStyle={styles.halfWidth}
+        />
+      </View>
+
+      <Input
+        label="Year Established"
+        value={yearEstablished}
+        onChangeText={setYearEstablished}
+        placeholder="Enter year"
+        keyboardType="numeric"
+        error={errors.yearEstablished}
+      />
+
+      <View style={styles.selectionGroup}>
+        <Text style={styles.label}>School Type</Text>
+        <View style={styles.buttonGroup}>
+          <Button
+            title="Public"
+            onPress={() => setType("Public")}
+            variant={type === "Public" ? "primary" : "outline"}
+            style={styles.selectionButton}
+            size="small"
+          />
+          <Button
+            title="Private"
+            onPress={() => setType("Private")}
+            variant={type === "Private" ? "primary" : "outline"}
+            style={styles.selectionButton}
+            size="small"
+          />
+        </View>
+      </View>
+
+      <View style={styles.selectionGroup}>
+        <Text style={styles.label}>Environment</Text>
+        <View style={styles.buttonGroup}>
+          <Button
+            title="Urban"
+            onPress={() => setEnvironment("Urban")}
+            variant={environment === "Urban" ? "primary" : "outline"}
+            style={styles.selectionButton}
+            size="small"
+          />
+          <Button
+            title="Rural"
+            onPress={() => setEnvironment("Rural")}
+            variant={environment === "Rural" ? "primary" : "outline"}
+            style={styles.selectionButton}
+            size="small"
+          />
+        </View>
+      </View>
+
+      <View style={styles.locationCard}>
+        <View style={styles.locationHeader}>
+          <MapPin size={20} color={colors.primary} />
+          <Text style={styles.locationTitle}>GPS Location</Text>
+        </View>
+        <Text style={styles.locationText}>
+          Lat: {location.latitude.toFixed(6)}, Lng: {location.longitude.toFixed(6)}
+        </Text>
+        <Button
+          title="Refresh Location"
+          onPress={() => {
+            const randomLat = 0.3 + Math.random() * 2;
+            const randomLng = 30 + Math.random() * 3;
+            setLocation({ latitude: randomLat, longitude: randomLng });
+          }}
+          variant="outline"
+          size="small"
+          style={styles.locationButton}
+        />
+      </View>
+    </View>
+  );
+
+  const renderEnrollment = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Enrollment & Contact</Text>
+      <Text style={styles.stepDescription}>
+        Student enrollment data and contact information
+      </Text>
+
+      <Input
+        label="Total Students *"
+        value={totalStudents}
+        onChangeText={setTotalStudents}
+        placeholder="Enter total number of students"
+        keyboardType="numeric"
+        error={errors.totalStudents}
+      />
+
+      <View style={styles.row}>
+        <Input
+          label="Male Students *"
+          value={maleStudents}
+          onChangeText={setMaleStudents}
+          placeholder="Enter number"
+          keyboardType="numeric"
+          error={errors.maleStudents}
+          containerStyle={styles.halfWidth}
+        />
+        <Input
+          label="Female Students *"
+          value={femaleStudents}
+          onChangeText={setFemaleStudents}
+          placeholder="Enter number"
+          keyboardType="numeric"
+          error={errors.femaleStudents}
+          containerStyle={styles.halfWidth}
+        />
+      </View>
+
+      <View style={styles.divider} />
+
+      <Input
+        label="Head Teacher Name *"
+        value={headTeacher}
+        onChangeText={setHeadTeacher}
+        placeholder="Enter head teacher's name"
+        error={errors.headTeacher}
+      />
+
+      <Input
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="Enter email address"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        error={errors.email}
+      />
+
+      <Input
+        label="Phone Number *"
+        value={phone}
+        onChangeText={setPhone}
+        placeholder="Enter phone number"
+        keyboardType="phone-pad"
+        error={errors.phone}
+      />
+    </View>
+  );
+
+  const renderInfrastructure = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>ICT Infrastructure</Text>
+      <Text style={styles.stepDescription}>
+        Information about computers and ICT equipment
+      </Text>
+
+      <View style={styles.row}>
+        <Input
+          label="Student Computers"
+          value={studentComputers}
+          onChangeText={setStudentComputers}
+          placeholder="0"
+          keyboardType="numeric"
+          error={errors.studentComputers}
+          containerStyle={styles.halfWidth}
+        />
+        <Input
+          label="Teacher Computers"
+          value={teacherComputers}
+          onChangeText={setTeacherComputers}
+          placeholder="0"
+          keyboardType="numeric"
+          error={errors.teacherComputers}
+          containerStyle={styles.halfWidth}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Input
+          label="Projectors"
+          value={projectors}
+          onChangeText={setProjectors}
+          placeholder="0"
+          keyboardType="numeric"
+          containerStyle={styles.halfWidth}
+        />
+        <Input
+          label="Smart Boards"
+          value={smartBoards}
+          onChangeText={setSmartBoards}
+          placeholder="0"
+          keyboardType="numeric"
+          containerStyle={styles.halfWidth}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Input
+          label="Tablets"
+          value={tablets}
+          onChangeText={setTablets}
+          placeholder="0"
+          keyboardType="numeric"
+          containerStyle={styles.halfWidth}
+        />
+        <Input
+          label="Laptops"
+          value={laptops}
+          onChangeText={setLaptops}
+          placeholder="0"
+          keyboardType="numeric"
+          containerStyle={styles.halfWidth}
+        />
+      </View>
+
+      <View style={styles.checkboxSection}>
+        <TouchableCheckbox
+          label="Has Computer Lab"
+          checked={hasComputerLab}
+          onToggle={() => setHasComputerLab(!hasComputerLab)}
+        />
+
+        {hasComputerLab && (
+          <View style={styles.conditionalSection}>
+            <Text style={styles.label}>Lab Condition</Text>
+            <View style={styles.buttonGroup}>
+              {["Excellent", "Good", "Fair", "Poor"].map((condition) => (
+                <Button
+                  key={condition}
+                  title={condition}
+                  onPress={() => setLabCondition(condition as any)}
+                  variant={labCondition === condition ? "primary" : "outline"}
+                  style={styles.conditionButton}
+                  size="small"
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        <TouchableCheckbox
+          label="Has ICT Room"
+          checked={hasICTRoom}
+          onToggle={() => setHasICTRoom(!hasICTRoom)}
+        />
+        <TouchableCheckbox
+          label="Has Electricity"
+          checked={hasElectricity}
+          onToggle={() => setHasElectricity(!hasElectricity)}
+        />
+      </View>
+    </View>
+  );
+
+  const renderConnectivity = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Internet Connectivity</Text>
+      <Text style={styles.stepDescription}>
+        Internet connection and network information
+      </Text>
+
+      <View style={styles.selectionGroup}>
+        <Text style={styles.label}>Connection Type</Text>
+        <View style={styles.buttonGroup}>
+          {["None", "Fiber", "Mobile", "Satellite"].map((type) => (
+            <Button
+              key={type}
+              title={type}
+              onPress={() => setConnectionType(type === "Mobile" ? "Mobile Broadband" : type as any)}
+              variant={
+                (type === "Mobile" ? "Mobile Broadband" : type) === connectionType 
+                  ? "primary" 
+                  : "outline"
+              }
+              style={styles.connectionButton}
+              size="small"
+            />
+          ))}
+        </View>
+      </View>
+
+      {connectionType !== "None" && (
+        <>
+          <Input
+            label="Bandwidth (Mbps) *"
+            value={bandwidthMbps}
+            onChangeText={setBandwidthMbps}
+            placeholder="Enter bandwidth in Mbps"
+            keyboardType="numeric"
+            error={errors.bandwidthMbps}
+          />
+
+          <Input
+            label="Internet Provider *"
+            value={provider}
+            onChangeText={setProvider}
+            placeholder="Enter internet provider"
+            error={errors.provider}
+          />
+
+          <View style={styles.selectionGroup}>
+            <Text style={styles.label}>Connection Stability</Text>
+            <View style={styles.buttonGroup}>
+              {["High", "Medium", "Low"].map((level) => (
+                <Button
+                  key={level}
+                  title={level}
+                  onPress={() => setStability(level as any)}
+                  variant={stability === level ? "primary" : "outline"}
+                  style={styles.stabilityButton}
+                  size="small"
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.checkboxSection}>
+            <Text style={styles.label}>WiFi Coverage Areas</Text>
+            {["Computer Lab", "Staff Room", "Classrooms", "Library", "Administration"].map((area) => (
+              <TouchableCheckbox
+                key={area}
+                label={area}
+                checked={wifiCoverage.includes(area)}
+                onToggle={() => toggleWifiCoverage(area)}
+              />
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 0:
+        return renderBasicInfo();
+      case 1:
+        return renderEnrollment();
+      case 2:
+        return renderInfrastructure();
+      case 3:
+        return renderConnectivity();
+      default:
+        return null;
+    }
   };
 
   return (
@@ -479,649 +896,41 @@ export default function AddSchoolScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.formContainer}>
-          {/* Progress Indicator */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width:
-                      activeSection === "basic"
-                        ? "25%"
-                        : activeSection === "enrollment"
-                        ? "50%"
-                        : activeSection === "infrastructure"
-                        ? "75%"
-                        : "100%",
-                  },
-                ]}
-              />
-            </View>
-            <View style={styles.progressLabels}>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  activeSection === "basic" && styles.activeLabel,
-                ]}
-              >
-                Basic
-              </Text>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  activeSection === "enrollment" && styles.activeLabel,
-                ]}
-              >
-                Enrollment
-              </Text>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  activeSection === "infrastructure" && styles.activeLabel,
-                ]}
-              >
-                Infrastructure
-              </Text>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  activeSection === "connectivity" && styles.activeLabel,
-                ]}
-              >
-                Connectivity
-              </Text>
-            </View>
-          </View>
+      <View style={styles.header}>
+        {renderStepIndicator()}
+      </View>
 
-          {/* Basic Information Section */}
-          {activeSection === "basic" && (
-            <>
-              <Text style={styles.sectionTitle}>Basic Information</Text>
-
-              <Input
-                label="School Name"
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter school name"
-                error={errors.name}
-              />
-
-              <Input
-                label="Region"
-                value={region}
-                onChangeText={setRegion}
-                placeholder="Enter region"
-              />
-
-              <Input
-                label="District"
-                value={district}
-                onChangeText={setDistrict}
-                placeholder="Enter district"
-                error={errors.district}
-              />
-
-              <Input
-                label="Sub-County"
-                value={subCounty}
-                onChangeText={setSubCounty}
-                placeholder="Enter sub-county"
-                error={errors.subCounty}
-              />
-
-              <View style={styles.row}>
-                <Input
-                  label="EMIS Number"
-                  value={emisNumber}
-                  onChangeText={setEmisNumber}
-                  placeholder="Enter EMIS number"
-                  containerStyle={styles.halfWidth}
-                />
-
-                <Input
-                  label="UPI Code"
-                  value={upiCode}
-                  onChangeText={setUpiCode}
-                  placeholder="Enter UPI code"
-                  containerStyle={styles.halfWidth}
-                />
-              </View>
-
-              <Input
-                label="Year Established"
-                value={yearEstablished}
-                onChangeText={setYearEstablished}
-                placeholder="Enter year"
-                keyboardType="numeric"
-                error={errors.yearEstablished}
-              />
-
-              <Text style={styles.label}>School Type</Text>
-              <View style={styles.buttonGroup}>
-                <Button
-                  title="Public"
-                  onPress={() => setType("Public")}
-                  variant={type === "Public" ? "primary" : "outline"}
-                  style={[styles.buttonGroupItem, styles.buttonGroupItemLeft]}
-                />
-                <Button
-                  title="Private"
-                  onPress={() => setType("Private")}
-                  variant={type === "Private" ? "primary" : "outline"}
-                  style={[styles.buttonGroupItem, styles.buttonGroupItemRight]}
-                />
-              </View>
-
-              <Text style={styles.label}>Environment</Text>
-              <View style={styles.buttonGroup}>
-                <Button
-                  title="Urban"
-                  onPress={() => setEnvironment("Urban")}
-                  variant={environment === "Urban" ? "primary" : "outline"}
-                  style={[styles.buttonGroupItem, styles.buttonGroupItemLeft]}
-                />
-                <Button
-                  title="Rural"
-                  onPress={() => setEnvironment("Rural")}
-                  variant={environment === "Rural" ? "primary" : "outline"}
-                  style={[styles.buttonGroupItem, styles.buttonGroupItemRight]}
-                />
-              </View>
-
-              <Text style={styles.label}>Ownership Type</Text>
-              <View style={styles.wideButtonGroup}>
-                <Button
-                  title="Government"
-                  onPress={() => setOwnershipType("Government")}
-                  variant={
-                    ownershipType === "Government" ? "primary" : "outline"
-                  }
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Government-aided"
-                  onPress={() => setOwnershipType("Government-aided")}
-                  variant={
-                    ownershipType === "Government-aided" ? "primary" : "outline"
-                  }
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Community"
-                  onPress={() => setOwnershipType("Community")}
-                  variant={
-                    ownershipType === "Community" ? "primary" : "outline"
-                  }
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Private"
-                  onPress={() => setOwnershipType("Private")}
-                  variant={ownershipType === "Private" ? "primary" : "outline"}
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-              </View>
-
-              <Text style={styles.label}>School Category</Text>
-              <View style={styles.wideButtonGroup}>
-                <Button
-                  title="Mixed"
-                  onPress={() => setSchoolCategory("Mixed")}
-                  variant={schoolCategory === "Mixed" ? "primary" : "outline"}
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Girls"
-                  onPress={() => setSchoolCategory("Girls")}
-                  variant={schoolCategory === "Girls" ? "primary" : "outline"}
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Boys"
-                  onPress={() => setSchoolCategory("Boys")}
-                  variant={schoolCategory === "Boys" ? "primary" : "outline"}
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Special Needs"
-                  onPress={() => setSchoolCategory("Special Needs")}
-                  variant={
-                    schoolCategory === "Special Needs" ? "primary" : "outline"
-                  }
-                  style={styles.wideButtonGroupItem}
-                  size="small"
-                />
-              </View>
-
-              <Input
-                label="Signature Program (Optional)"
-                value={signatureProgram}
-                onChangeText={setSignatureProgram}
-                placeholder="Enter signature program"
-              />
-
-              <View style={styles.locationContainer}>
-                <View style={styles.locationHeader}>
-                  <MapPin size={18} color={colors.primary} />
-                  <Text style={styles.locationTitle}>GPS Location</Text>
-                </View>
-                <Text style={styles.locationText}>
-                  Latitude: {location.latitude.toFixed(6)}
-                </Text>
-                <Text style={styles.locationText}>
-                  Longitude: {location.longitude.toFixed(6)}
-                </Text>
-                <Button
-                  title="Refresh Location"
-                  onPress={() => {
-                    // Simulate refreshing location
-                    const randomLat = 0.3 + Math.random() * 2;
-                    const randomLng = 30 + Math.random() * 3;
-                    setLocation({
-                      latitude: randomLat,
-                      longitude: randomLng,
-                    });
-                  }}
-                  variant="outline"
-                  style={styles.locationButton}
-                />
-              </View>
-            </>
-          )}
-
-          {/* Enrollment Section */}
-          {activeSection === "enrollment" && (
-            <>
-              <Text style={styles.sectionTitle}>Enrollment Data</Text>
-
-              <Input
-                label="Total Students"
-                value={totalStudents}
-                onChangeText={setTotalStudents}
-                placeholder="Enter total number of students"
-                keyboardType="numeric"
-                error={errors.totalStudents}
-              />
-
-              <View style={styles.row}>
-                <Input
-                  label="Male Students"
-                  value={maleStudents}
-                  onChangeText={setMaleStudents}
-                  placeholder="Enter number"
-                  keyboardType="numeric"
-                  error={errors.maleStudents}
-                  containerStyle={styles.halfWidth}
-                />
-
-                <Input
-                  label="Female Students"
-                  value={femaleStudents}
-                  onChangeText={setFemaleStudents}
-                  placeholder="Enter number"
-                  keyboardType="numeric"
-                  error={errors.femaleStudents}
-                  containerStyle={styles.halfWidth}
-                />
-              </View>
-
-              <Text style={styles.sectionTitle}>Contact Information</Text>
-
-              <Input
-                label="Head Teacher Name"
-                value={headTeacher}
-                onChangeText={setHeadTeacher}
-                placeholder="Enter head teacher's name"
-                error={errors.headTeacher}
-              />
-
-              <Input
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter email address"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                error={errors.email}
-              />
-
-              <Input
-                label="Phone"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Enter phone number"
-                keyboardType="phone-pad"
-                error={errors.phone}
-              />
-            </>
-          )}
-
-          {/* Infrastructure Section */}
-          {activeSection === "infrastructure" && (
-            <>
-              <Text style={styles.sectionTitle}>ICT Infrastructure</Text>
-
-              <View style={styles.row}>
-                <Input
-                  label="Student Computers"
-                  value={studentComputers}
-                  onChangeText={setStudentComputers}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  error={errors.studentComputers}
-                  containerStyle={styles.halfWidth}
-                />
-
-                <Input
-                  label="Teacher Computers"
-                  value={teacherComputers}
-                  onChangeText={setTeacherComputers}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  error={errors.teacherComputers}
-                  containerStyle={styles.halfWidth}
-                />
-              </View>
-
-              <View style={styles.row}>
-                <Input
-                  label="Projectors"
-                  value={projectors}
-                  onChangeText={setProjectors}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  error={errors.projectors}
-                  containerStyle={styles.halfWidth}
-                />
-
-                <Input
-                  label="Smart Boards"
-                  value={smartBoards}
-                  onChangeText={setSmartBoards}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  error={errors.smartBoards}
-                  containerStyle={styles.halfWidth}
-                />
-              </View>
-
-              <View style={styles.row}>
-                <Input
-                  label="Tablets"
-                  value={tablets}
-                  onChangeText={setTablets}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  error={errors.tablets}
-                  containerStyle={styles.halfWidth}
-                />
-
-                <Input
-                  label="Laptops"
-                  value={laptops}
-                  onChangeText={setLaptops}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  error={errors.laptops}
-                  containerStyle={styles.halfWidth}
-                />
-              </View>
-
-              <TouchableCheckbox
-                label="Has Computer Lab"
-                checked={hasComputerLab}
-                onToggle={() => setHasComputerLab(!hasComputerLab)}
-              />
-
-              {hasComputerLab && (
-                <>
-                  <Text style={styles.label}>Lab Condition</Text>
-                  <View style={styles.buttonGroup}>
-                    <Button
-                      title="Excellent"
-                      onPress={() => setLabCondition("Excellent")}
-                      variant={
-                        labCondition === "Excellent" ? "primary" : "outline"
-                      }
-                      style={styles.buttonGroupItem}
-                      size="small"
-                    />
-                    <Button
-                      title="Good"
-                      onPress={() => setLabCondition("Good")}
-                      variant={labCondition === "Good" ? "primary" : "outline"}
-                      style={styles.buttonGroupItem}
-                      size="small"
-                    />
-                    <Button
-                      title="Fair"
-                      onPress={() => setLabCondition("Fair")}
-                      variant={labCondition === "Fair" ? "primary" : "outline"}
-                      style={styles.buttonGroupItem}
-                      size="small"
-                    />
-                    <Button
-                      title="Poor"
-                      onPress={() => setLabCondition("Poor")}
-                      variant={labCondition === "Poor" ? "primary" : "outline"}
-                      style={styles.buttonGroupItem}
-                      size="small"
-                    />
-                  </View>
-                </>
-              )}
-
-              <Text style={styles.label}>Power Backup</Text>
-              <View style={styles.checkboxContainer}>
-                <TouchableCheckbox
-                  label="Generator"
-                  checked={powerBackup.includes("Generator")}
-                  onToggle={() => togglePowerBackup("Generator")}
-                />
-                <TouchableCheckbox
-                  label="Solar"
-                  checked={powerBackup.includes("Solar")}
-                  onToggle={() => togglePowerBackup("Solar")}
-                />
-                <TouchableCheckbox
-                  label="UPS"
-                  checked={powerBackup.includes("UPS")}
-                  onToggle={() => togglePowerBackup("UPS")}
-                />
-                <TouchableCheckbox
-                  label="Battery Backup"
-                  checked={powerBackup.includes("Battery")}
-                  onToggle={() => togglePowerBackup("Battery")}
-                />
-              </View>
-
-              <View style={styles.checkboxRow}>
-                <TouchableCheckbox
-                  label="Has ICT Room"
-                  checked={hasICTRoom}
-                  onToggle={() => setHasICTRoom(!hasICTRoom)}
-                />
-                <TouchableCheckbox
-                  label="Has Electricity"
-                  checked={hasElectricity}
-                  onToggle={() => setHasElectricity(!hasElectricity)}
-                />
-              </View>
-
-              <View style={styles.checkboxRow}>
-                <TouchableCheckbox
-                  label="Has Secure Room"
-                  checked={hasSecureRoom}
-                  onToggle={() => setHasSecureRoom(!hasSecureRoom)}
-                />
-                <TouchableCheckbox
-                  label="Has Furniture"
-                  checked={hasFurniture}
-                  onToggle={() => setHasFurniture(!hasFurniture)}
-                />
-              </View>
-            </>
-          )}
-
-          {/* Connectivity Section */}
-          {activeSection === "connectivity" && (
-            <>
-              <Text style={styles.sectionTitle}>Internet Connectivity</Text>
-
-              <Text style={styles.label}>Connection Type</Text>
-              <View style={styles.buttonGroup}>
-                <Button
-                  title="None"
-                  onPress={() => setConnectionType("None")}
-                  variant={connectionType === "None" ? "primary" : "outline"}
-                  style={styles.buttonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Fiber"
-                  onPress={() => setConnectionType("Fiber")}
-                  variant={connectionType === "Fiber" ? "primary" : "outline"}
-                  style={styles.buttonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Mobile"
-                  onPress={() => setConnectionType("Mobile Broadband")}
-                  variant={
-                    connectionType === "Mobile Broadband"
-                      ? "primary"
-                      : "outline"
-                  }
-                  style={styles.buttonGroupItem}
-                  size="small"
-                />
-                <Button
-                  title="Satellite"
-                  onPress={() => setConnectionType("Satellite")}
-                  variant={
-                    connectionType === "Satellite" ? "primary" : "outline"
-                  }
-                  style={styles.buttonGroupItem}
-                  size="small"
-                />
-              </View>
-
-              {connectionType !== "None" && (
-                <>
-                  <Input
-                    label="Bandwidth (Mbps)"
-                    value={bandwidthMbps}
-                    onChangeText={setBandwidthMbps}
-                    placeholder="Enter bandwidth in Mbps"
-                    keyboardType="numeric"
-                    error={errors.bandwidthMbps}
-                  />
-
-                  <Input
-                    label="Provider"
-                    value={provider}
-                    onChangeText={setProvider}
-                    placeholder="Enter internet provider"
-                    error={errors.provider}
-                  />
-
-                  <Text style={styles.label}>WiFi Coverage Areas</Text>
-                  <View style={styles.checkboxContainer}>
-                    <TouchableCheckbox
-                      label="Computer Lab"
-                      checked={wifiCoverage.includes("Computer Lab")}
-                      onToggle={() => toggleWifiCoverage("Computer Lab")}
-                    />
-                    <TouchableCheckbox
-                      label="Staff Room"
-                      checked={wifiCoverage.includes("Staff Room")}
-                      onToggle={() => toggleWifiCoverage("Staff Room")}
-                    />
-                    <TouchableCheckbox
-                      label="Classrooms"
-                      checked={wifiCoverage.includes("Classrooms")}
-                      onToggle={() => toggleWifiCoverage("Classrooms")}
-                    />
-                    <TouchableCheckbox
-                      label="Library"
-                      checked={wifiCoverage.includes("Library")}
-                      onToggle={() => toggleWifiCoverage("Library")}
-                    />
-                    <TouchableCheckbox
-                      label="Administration"
-                      checked={wifiCoverage.includes("Administration")}
-                      onToggle={() => toggleWifiCoverage("Administration")}
-                    />
-                  </View>
-
-                  <Text style={styles.label}>Connection Stability</Text>
-                  <View style={styles.buttonGroup}>
-                    <Button
-                      title="High"
-                      onPress={() => setStability("High")}
-                      variant={stability === "High" ? "primary" : "outline"}
-                      style={styles.buttonGroupItem}
-                    />
-                    <Button
-                      title="Medium"
-                      onPress={() => setStability("Medium")}
-                      variant={stability === "Medium" ? "primary" : "outline"}
-                      style={styles.buttonGroupItem}
-                    />
-                    <Button
-                      title="Low"
-                      onPress={() => setStability("Low")}
-                      variant={stability === "Low" ? "primary" : "outline"}
-                      style={styles.buttonGroupItem}
-                    />
-                  </View>
-
-                  <View style={styles.checkboxRow}>
-                    <TouchableCheckbox
-                      label="Has Usage Policy"
-                      checked={hasUsagePolicy}
-                      onToggle={() => setHasUsagePolicy(!hasUsagePolicy)}
-                    />
-                    <TouchableCheckbox
-                      label="Is Stable"
-                      checked={isStable}
-                      onToggle={() => setIsStable(!isStable)}
-                    />
-                  </View>
-                </>
-              )}
-            </>
-          )}
-
-          <View style={styles.navigationButtons}>
-            {activeSection !== "basic" && (
-              <Button
-                title="Back"
-                onPress={handleBack}
-                variant="outline"
-                style={styles.navigationButton}
-              />
-            )}
-
-            <Button
-              title={activeSection === "connectivity" ? "Save School" : "Next"}
-              onPress={handleNext}
-              loading={isLoading}
-              style={styles.navigationButton}
-            />
-          </View>
-        </View>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <Animated.View style={styles.formContainer}>
+          {renderCurrentStep()}
+        </Animated.View>
       </ScrollView>
+
+      <View style={styles.navigationContainer}>
+        <View style={styles.navigationButtons}>
+          {currentStep > 0 && (
+            <Button
+              title="Previous"
+              onPress={handlePrevious}
+              variant="outline"
+              icon={<ChevronLeft size={16} color={colors.primary} />}
+              style={styles.navButton}
+            />
+          )}
+          
+          <Button
+            title={currentStep === STEPS.length - 1 ? "Save School" : "Next"}
+            onPress={handleNext}
+            loading={isLoading}
+            icon={
+              currentStep === STEPS.length - 1 ? 
+                <Check size={16} color={colors.card} /> : 
+                <ChevronRight size={16} color={colors.card} />
+            }
+            style={[styles.navButton, styles.primaryNavButton]}
+          />
+        </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -1131,157 +940,217 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  header: {
+    backgroundColor: colors.card,
+    paddingTop: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  stepIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stepItem: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  stepCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  stepCompleted: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  stepCurrent: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  stepDisabled: {
+    backgroundColor: colors.disabled,
+    borderColor: colors.disabled,
+  },
+  stepLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  stepLabelCompleted: {
+    color: colors.success,
+  },
+  stepLabelCurrent: {
+    color: colors.primary,
+  },
+  stepLabelDisabled: {
+    color: colors.disabled,
+  },
+  stepConnector: {
+    position: 'absolute',
+    top: 20,
+    left: '50%',
+    right: '-50%',
+    height: 2,
+    backgroundColor: colors.border,
+    zIndex: -1,
+  },
+  stepConnectorCompleted: {
+    backgroundColor: colors.success,
+  },
   scrollView: {
     flex: 1,
   },
   formContainer: {
-    padding: 16,
+    padding: 20,
   },
-  progressContainer: {
-    marginBottom: 24,
+  stepContent: {
+    minHeight: 400,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: `${colors.primary}20`,
-    borderRadius: 4,
+  stepTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 8,
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 4,
-  },
-  progressLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  progressLabel: {
-    fontSize: 12,
+  stepDescription: {
+    fontSize: 16,
     color: colors.textSecondary,
-  },
-  activeLabel: {
-    color: colors.primary,
-    fontWeight: "600",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 12,
+    marginBottom: 24,
+    lineHeight: 22,
   },
   row: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
+    flexDirection: 'row',
+    gap: 16,
   },
   halfWidth: {
     flex: 1,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 12,
+  },
+  selectionGroup: {
+    marginBottom: 24,
   },
   buttonGroup: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  buttonGroupItem: {
-    flex: 1,
-    borderRadius: 0,
-  },
-  buttonGroupItemLeft: {
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-  },
-  buttonGroupItemRight: {
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
-  },
-  wideButtonGroup: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    flexWrap: 'wrap',
   },
-  wideButtonGroupItem: {
-    minWidth: "48%",
-    marginBottom: 8,
+  selectionButton: {
+    flex: 1,
+    minWidth: 100,
   },
-  locationContainer: {
+  connectionButton: {
+    flex: 1,
+    minWidth: 80,
+  },
+  stabilityButton: {
+    flex: 1,
+    minWidth: 70,
+  },
+  conditionButton: {
+    flex: 1,
+    minWidth: 70,
+  },
+  locationCard: {
     backgroundColor: colors.card,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: 16,
   },
   locationHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
     gap: 8,
   },
   locationTitle: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: '600',
     color: colors.text,
   },
   locationText: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  locationButton: {
-    marginTop: 12,
-  },
-  checkbox: {
-    flexDirection: "row",
-    alignItems: "center",
     marginBottom: 12,
   },
+  locationButton: {
+    alignSelf: 'flex-start',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 24,
+  },
+  checkboxSection: {
+    marginTop: 16,
+  },
+  conditionalSection: {
+    marginLeft: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    paddingLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary,
+  },
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
   checkboxBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     borderWidth: 2,
     borderColor: colors.primary,
-    marginRight: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.card,
   },
   checkboxChecked: {
     backgroundColor: colors.primary,
   },
-  checkboxInner: {
-    width: 10,
-    height: 10,
-    backgroundColor: colors.card,
-    borderRadius: 2,
-  },
   checkboxLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.text,
+    flex: 1,
   },
-  checkboxContainer: {
-    marginBottom: 16,
-  },
-  checkboxRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
+  navigationContainer: {
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
   },
   navigationButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 24,
-    marginBottom: 40,
+    flexDirection: 'row',
     gap: 12,
   },
-  navigationButton: {
+  navButton: {
     flex: 1,
-    height: 50,
+    height: 48,
+  },
+  primaryNavButton: {
+    flex: 2,
   },
 });
