@@ -1,30 +1,28 @@
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import PDFDownloadButton from '@/components/PDFDownloadButton';
 import ReportCard from '@/components/ReportCard';
 import SyncIndicator from '@/components/SyncIndicator';
 import { colors } from '@/constants/Colors';
 import { useSchoolStore } from '@/store/schoolStore';
 import { SchoolPDFGenerator, downloadPDF } from '@/utils/pdfGenerator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { BookOpen, Building, Calendar, Camera, Download, LocationEdit as Edit3, Globe, GraduationCap, HardDrive, Heart, Chrome as Home, Laptop, Mail, MapPin, Monitor, Phone, Plus, School as SchoolIcon, Settings, Share2, Shield, Trash2, TrendingUp, User, Users, Wifi, Zap } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { BookOpen, Building, Calendar, Camera, Edit3, Globe, GraduationCap, HardDrive, Heart, Chrome as Home, Laptop, Mail, MapPin, Monitor, Phone, Plus, School as SchoolIcon, Settings, Share2, Shield, Trash2, TrendingUp, User, Users, Wifi, Zap } from 'lucide-react-native';
+import React from 'react';
 import { 
   Alert, 
-  Platform, 
   ScrollView, 
   Share, 
   StyleSheet, 
   Text, 
   TouchableOpacity, 
-  View,
-  ActivityIndicator 
+  View
 } from 'react-native';
 
 export default function SchoolDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { getSchoolById, getReportsBySchool, deleteSchool } = useSchoolStore();
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   const school = getSchoolById(id);
   const reports = getReportsBySchool(id);
@@ -70,20 +68,11 @@ export default function SchoolDetailsScreen() {
   };
   
   const handleDownloadProfile = async () => {
-    setIsGeneratingPDF(true);
-    try {
-      const generator = new SchoolPDFGenerator();
-      const pdfData = generator.generateSchoolProfile(school);
-      const filename = `School_Profile_${school.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-      
-      await downloadPDF(pdfData, filename);
-      Alert.alert('Success', 'School profile downloaded successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate PDF');
-      console.error('PDF generation error:', error);
-    } finally {
-      setIsGeneratingPDF(false);
-    }
+    const generator = new SchoolPDFGenerator();
+    const pdfData = generator.generateSchoolProfile(school);
+    const filename = `School_Profile_${school.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    
+    await downloadPDF(pdfData, filename);
   };
 
   const handleDownloadReports = async () => {
@@ -92,20 +81,11 @@ export default function SchoolDetailsScreen() {
       return;
     }
 
-    setIsGeneratingPDF(true);
-    try {
-      const generator = new SchoolPDFGenerator();
-      const pdfData = generator.generateSchoolReports(school, reports);
-      const filename = `School_Reports_${school.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-      
-      await downloadPDF(pdfData, filename);
-      Alert.alert('Success', 'School reports downloaded successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate reports PDF');
-      console.error('PDF generation error:', error);
-    } finally {
-      setIsGeneratingPDF(false);
-    }
+    const generator = new SchoolPDFGenerator();
+    const pdfData = generator.generateSchoolReports(school, reports);
+    const filename = `School_Reports_${school.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    
+    await downloadPDF(pdfData, filename);
   };
 
   // Calculate some statistics
@@ -151,17 +131,12 @@ export default function SchoolDetailsScreen() {
             style={styles.actionButton}
             size="small"
           />
-          <Button
-            title={isGeneratingPDF ? "Generating..." : "Download Profile"}
-            onPress={handleDownloadProfile}
+          <PDFDownloadButton
+            title="Profile"
+            onDownload={handleDownloadProfile}
             variant="outline"
-            icon={isGeneratingPDF ? 
-              <ActivityIndicator size={16} color={colors.primary} /> : 
-              <Download size={16} color={colors.primary} />
-            }
             style={styles.actionButton}
             size="small"
-            disabled={isGeneratingPDF}
           />
           <Button
             title="Delete"
@@ -546,17 +521,13 @@ export default function SchoolDetailsScreen() {
         <View style={styles.reportsSectionHeader}>
           <Text style={styles.reportsSectionTitle}>ICT Reports ({reports.length})</Text>
           <View style={styles.reportActions}>
-            <Button
-              title={isGeneratingPDF ? "Generating..." : "Download All"}
-              onPress={handleDownloadReports}
+            <PDFDownloadButton
+              title="Download All"
+              onDownload={handleDownloadReports}
               variant="outline"
-              icon={isGeneratingPDF ? 
-                <ActivityIndicator size={16} color={colors.primary} /> : 
-                <Download size={16} color={colors.primary} />
-              }
               style={styles.downloadButton}
               size="small"
-              disabled={isGeneratingPDF || reports.length === 0}
+              disabled={reports.length === 0}
             />
             <Button
               title="Add Report"

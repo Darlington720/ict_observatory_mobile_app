@@ -1,6 +1,8 @@
 import jsPDF from 'jspdf';
 import { School, ICTReport } from '@/types';
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 // PDF generation utility for school data
 export class SchoolPDFGenerator {
@@ -406,25 +408,108 @@ export class SchoolPDFGenerator {
   }
 }
 
-// Helper function to download PDF
+// Helper function to download PDF with complete mobile support
 export const downloadPDF = async (
-  pdfData: Uint8Array, 
+  pdfData: Uint8Array,
   filename: string
 ): Promise<void> => {
-  if (Platform.OS === 'web') {
-    // Web download
-    const blob = new Blob([pdfData], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } else {
-    // Mobile - would need expo-file-system and expo-sharing
-    console.log('PDF generation completed for mobile - implement file system save');
+  try {
+    if (Platform.OS === 'web') {
+      // Web download
+      const blob = new Blob([pdfData], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      // Mobile implementation using expo-file-system and expo-sharing
+      
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        throw new Error('Sharing is not available on this device');
+      }
+
+      // Create a temporary file path
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      
+      // Convert Uint8Array to base64 string
+      const base64String = arrayBufferToBase64(pdfData);
+      
+      // Write the PDF data to the file system
+      await FileSystem.writeAsStringAsync(fileUri, base64String, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Share the file
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Save or Share PDF',
+        UTI: 'com.adobe.pdf',
+      });
+
+      // Optional: Clean up the temporary file after sharing
+      // Note: We keep the file for now as the user might want to access it again
+      // You can uncomment the line below if you want to delete it immediately
+      // await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      
+    }
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    throw new Error(`Failed to download PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// Helper function to convert ArrayBuffer/Uint8Array to base64
+function arrayBufferToBase64(buffer: Uint8Array): string {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  
+  return btoa(binary);
+}
+
+// Additional utility function to get file info (useful for debugging)
+export const getFileInfo = async (fileUri: string) => {
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    return fileInfo;
+  } catch (error) {
+    console.error('Error getting file info:', error);
+    return null;
+  }
+};
+
+// Utility function to clean up old PDF files (optional)
+export const cleanupOldPDFs = async () => {
+  try {
+    const documentDir = FileSystem.documentDirectory;
+    if (!documentDir) return;
+
+    const files = await FileSystem.readDirectoryAsync(documentDir);
+    const pdfFiles = files.filter(file => file.endsWith('.pdf'));
+    
+    // Delete PDF files older than 7 days
+    const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    
+    for (const file of pdfFiles) {
+      const fileUri = `${documentDir}${file}`;
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      
+      if (fileInfo.exists && fileInfo.modificationTime && fileInfo.modificationTime < oneWeekAgo) {
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      }
+    }
+  } catch (error) {
+    console.error('Error cleaning up old PDFs:', error);
   }
 };
