@@ -39,6 +39,11 @@ interface SchoolState {
   hydrateSchoolsAndReports: (incomingSchools: School[], incomingReports: ICTReport[]) => void;
 }
 
+// Helper function to sort by lastUpdated (latest first)
+const sortByLatest = <T extends { lastUpdated: string }>(items: T[]): T[] => {
+  return [...items].sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+};
+
 export const useSchoolStore = create<SchoolState>()(
   persist(
     (set, get) => ({
@@ -50,17 +55,20 @@ export const useSchoolStore = create<SchoolState>()(
 
       // School actions
       addSchool: (school) => {
-        set((state) => ({
-          schools: [
+        set((state) => {
+          const newSchools = [
             ...state.schools,
             { ...school, synced: false, lastUpdated: new Date().toISOString() },
-          ],
-        }));
+          ];
+          return {
+            schools: sortByLatest(newSchools),
+          };
+        });
       },
 
       updateSchool: (school) => {
-        set((state) => ({
-          schools: state.schools.map((s) =>
+        set((state) => {
+          const updatedSchools = state.schools.map((s) =>
             s.id === school.id
               ? {
                   ...school,
@@ -68,8 +76,11 @@ export const useSchoolStore = create<SchoolState>()(
                   lastUpdated: new Date().toISOString(),
                 }
               : s
-          ),
-        }));
+          );
+          return {
+            schools: sortByLatest(updatedSchools),
+          };
+        });
       },
 
       deleteSchool: (id) => {
@@ -85,17 +96,20 @@ export const useSchoolStore = create<SchoolState>()(
 
       // Report actions
       addReport: (report) => {
-        set((state) => ({
-          reports: [
+        set((state) => {
+          const newReports = [
             ...state.reports,
             { ...report, synced: false, lastUpdated: new Date().toISOString() },
-          ],
-        }));
+          ];
+          return {
+            reports: sortByLatest(newReports),
+          };
+        });
       },
 
       updateReport: (report) => {
-        set((state) => ({
-          reports: state.reports.map((r) =>
+        set((state) => {
+          const updatedReports = state.reports.map((r) =>
             r.id === report.id
               ? {
                   ...report,
@@ -103,8 +117,11 @@ export const useSchoolStore = create<SchoolState>()(
                   lastUpdated: new Date().toISOString(),
                 }
               : r
-          ),
-        }));
+          );
+          return {
+            reports: sortByLatest(updatedReports),
+          };
+        });
       },
 
       deleteReport: (id) => {
@@ -118,7 +135,8 @@ export const useSchoolStore = create<SchoolState>()(
       },
 
       getReportsBySchool: (schoolId) => {
-        return get().reports.filter((r) => r.schoolId === schoolId);
+        const reports = get().reports.filter((r) => r.schoolId === schoolId);
+        return sortByLatest(reports);
       },
 
       // Sync actions
@@ -144,21 +162,27 @@ export const useSchoolStore = create<SchoolState>()(
 
         // Update sync status
         if (type === "school") {
-          set((state) => ({
-            schools: state.schools.map((s) =>
+          set((state) => {
+            const updatedSchools = state.schools.map((s) =>
               s.id === id
                 ? { ...s, synced: success, lastUpdated: timestamp }
                 : s
-            ),
-          }));
+            );
+            return {
+              schools: sortByLatest(updatedSchools),
+            };
+          });
         } else {
-          set((state) => ({
-            reports: state.reports.map((r) =>
+          set((state) => {
+            const updatedReports = state.reports.map((r) =>
               r.id === id
                 ? { ...r, synced: success, lastUpdated: timestamp }
                 : r
-            ),
-          }));
+            );
+            return {
+              reports: sortByLatest(updatedReports),
+            };
+          });
         }
       },
 
@@ -225,13 +249,13 @@ export const useSchoolStore = create<SchoolState>()(
             // If existing report is unsynced, we keep the local version
           });
 
-          // Convert maps back to arrays
+          // Convert maps back to arrays and sort by latest
           const mergedSchools = Array.from(schoolsMap.values());
           const mergedReports = Array.from(reportsMap.values());
 
           return {
-            schools: mergedSchools,
-            reports: mergedReports,
+            schools: sortByLatest(mergedSchools),
+            reports: sortByLatest(mergedReports),
           };
         });
       },
