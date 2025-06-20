@@ -34,6 +34,9 @@ interface SchoolState {
   getUnsyncedSchools: () => School[];
   getUnsyncedReports: () => ICTReport[];
   toggleAutoSync: () => void;
+
+  // Hydration action
+  hydrateSchoolsAndReports: (incomingSchools: School[], incomingReports: ICTReport[]) => void;
 }
 
 export const useSchoolStore = create<SchoolState>()(
@@ -171,6 +174,66 @@ export const useSchoolStore = create<SchoolState>()(
         set((state) => ({
           autoSync: !state.autoSync,
         }));
+      },
+
+      // Hydration action with merge logic
+      hydrateSchoolsAndReports: (incomingSchools, incomingReports) => {
+        set((state) => {
+          // Create maps for efficient lookup and merging
+          const schoolsMap = new Map<string, School>();
+          const reportsMap = new Map<string, ICTReport>();
+
+          // First, add all existing schools and reports to the maps
+          // This preserves all current data, including unsynced items
+          state.schools.forEach(school => {
+            schoolsMap.set(school.id, school);
+          });
+
+          state.reports.forEach(report => {
+            reportsMap.set(report.id, report);
+          });
+
+          // Then, merge incoming synced data
+          // This will overwrite existing entries with the same ID, but only with synced data
+          incomingSchools.forEach(school => {
+            const existingSchool = schoolsMap.get(school.id);
+            
+            // If the existing school is unsynced (has local changes), preserve it
+            // Otherwise, update with the incoming synced data
+            if (!existingSchool || existingSchool.synced) {
+              schoolsMap.set(school.id, {
+                ...school,
+                synced: true, // Mark incoming data as synced
+                lastUpdated: school.lastUpdated || new Date().toISOString(),
+              });
+            }
+            // If existing school is unsynced, we keep the local version
+          });
+
+          incomingReports.forEach(report => {
+            const existingReport = reportsMap.get(report.id);
+            
+            // If the existing report is unsynced (has local changes), preserve it
+            // Otherwise, update with the incoming synced data
+            if (!existingReport || existingReport.synced) {
+              reportsMap.set(report.id, {
+                ...report,
+                synced: true, // Mark incoming data as synced
+                lastUpdated: report.lastUpdated || new Date().toISOString(),
+              });
+            }
+            // If existing report is unsynced, we keep the local version
+          });
+
+          // Convert maps back to arrays
+          const mergedSchools = Array.from(schoolsMap.values());
+          const mergedReports = Array.from(reportsMap.values());
+
+          return {
+            schools: mergedSchools,
+            reports: mergedReports,
+          };
+        });
       },
     }),
     {
